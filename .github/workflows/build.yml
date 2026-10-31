@@ -32,13 +32,15 @@ jobs:
       - name: Build app bundle
         run: |
           chmod +x scripts/*.sh
-          CONFIG=release VERSION="${GITHUB_REF_NAME#v}" ./scripts/build-app.sh
+          UNIVERSAL=1 CONFIG=release VERSION="${GITHUB_REF_NAME#v}" ./scripts/build-app.sh
         shell: bash
 
       - name: Verify bundle
         run: |
           test -x "build/OpenCode Hub.app/Contents/MacOS/OpenCodeHub"
           /usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "build/OpenCode Hub.app/Contents/Info.plist"
+          lipo -archs "build/OpenCode Hub.app/Contents/MacOS/OpenCodeHub" | grep -q x86_64
+          lipo -archs "build/OpenCode Hub.app/Contents/MacOS/OpenCodeHub" | grep -q arm64
           file "build/OpenCode Hub.app/Contents/MacOS/OpenCodeHub"
 
       - name: Package

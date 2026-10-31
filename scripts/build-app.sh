@@ -13,11 +13,19 @@ if ! command -v swift >/dev/null 2>&1; then
   exit 1
 fi
 
-echo "==> Building ($CONFIG)"
-swift build -c "$CONFIG" --package-path "$ROOT"
+UNIVERSAL="${UNIVERSAL:-0}"
+CAP="$(printf "%s" "$CONFIG" | awk '{print toupper(substr($0,1,1)) substr($0,2)}')"
 
-BIN_DIR="$(swift build -c "$CONFIG" --package-path "$ROOT" --show-bin-path)"
-BIN="$BIN_DIR/OpenCodeHub"
+if [ "$UNIVERSAL" = "1" ]; then
+  echo "==> Building universal ($CONFIG)"
+  swift build -c "$CONFIG" --arch arm64 --arch x86_64 --package-path "$ROOT"
+  BIN="$ROOT/.build/apple/Products/$CAP/OpenCodeHub"
+else
+  echo "==> Building ($CONFIG)"
+  swift build -c "$CONFIG" --package-path "$ROOT"
+  BIN="$(swift build -c "$CONFIG" --package-path "$ROOT" --show-bin-path)/OpenCodeHub"
+fi
+BIN_DIR="$(dirname "$BIN")"
 [ -x "$BIN" ] || { echo "Missing binary at $BIN" >&2; exit 1; }
 
 echo "==> Assembling $BUNDLE"

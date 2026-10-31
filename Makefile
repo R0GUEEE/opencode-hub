@@ -1,5 +1,6 @@
 CONFIG ?= release
 VERSION ?= 1.0.0
+UNIVERSAL ?= 0
 
 .PHONY: setup resolve app build run dmg clean check
 
@@ -12,7 +13,7 @@ resolve:
 	swift package resolve
 
 app:
-	CONFIG=$(CONFIG) VERSION=$(VERSION) ./scripts/build-app.sh
+	CONFIG=$(CONFIG) VERSION=$(VERSION) UNIVERSAL=$(UNIVERSAL) ./scripts/build-app.sh
 
 build:
 	swift build -c $(CONFIG)
