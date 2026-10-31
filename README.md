@@ -59,6 +59,9 @@ singular names still work as a legacy fallback, and the hub only ever writes plu
 
 Requires Xcode 15+ (or the Command Line Tools) with Swift 5.9.
 
+CI builds every push on `macos-15` and uploads `OpenCodeHub.zip`; pushing a `v*` tag
+publishes the universal bundle as a release asset.
+
 ```bash
 cd opencode-hub
 make setup               # toolchain + manifest + dependency graph
@@ -73,12 +76,11 @@ swift build -c release
 ./scripts/build-app.sh
 ```
 
-A universal signed build:
+A universal (Apple silicon + Intel) build:
 
 ```bash
-swift build -c release --arch arm64 --arch x86_64
-CONFIG=release VERSION=1.0.0 ./scripts/build-app.sh
-./scripts/make-dmg.sh    # -> build/OpenCodeHub-1.0.0.dmg
+make app UNIVERSAL=1     # lipo: arm64 + x86_64
+make dmg UNIVERSAL=1     # -> build/OpenCodeHub-1.0.0.dmg
 ```
 
 The bundle is ad-hoc signed. Gatekeeper still wants a right-click → Open the first
