@@ -67,6 +67,25 @@ jobs:
           codesign -dv --entitlements :- "$APP" 2>&1 | head -20
           file "$BIN"
 
+      - name: Launch smoke test
+        run: |
+          APP="build/Open Code Hub.app"
+          if ! open "$APP" 2>/tmp/open.err; then
+            echo "no GUI session available here; skipping the launch check"
+            cat /tmp/open.err || true
+            exit 0
+          fi
+          sleep 8
+          if pgrep -f "Contents/MacOS/Open Code Hub" >/dev/null; then
+            echo "app launched and stayed up"
+          else
+            echo "::error::app exited during launch"
+            log show --last 3m --predicate 'process == "Open Code Hub"' --style compact 2>/dev/null | tail -40 || true
+            for f in ~/Library/Logs/DiagnosticReports/*.crash; do [ -f "$f" ] && head -60 "$f"; done
+            exit 1
+          fi
+          osascript -e 'tell application "Open Code Hub" to quit' 2>/dev/null || pkill -f "Contents/MacOS/Open Code Hub" || true
+
       - name: Package
         run: |
           ditto -c -k --sequesterRsrc --keepParent "build/Open Code Hub.app" "build/OpenCodeHub.zip"
