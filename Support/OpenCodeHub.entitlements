@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- The app edits an existing ~/.config/opencode tree, launches the user's
+	     own binaries (opencode, bun, tar, open) and reads their caches, so it is
+	     not sandboxed. The two capability keys below are declared anyway: they
+	     document the network and file access the app performs, and are what a
+	     sandboxed build would need on day one. -->
+	<key>com.apple.security.app-sandbox</key>
+	<false/>
+	<key>com.apple.security.network.client</key>
+	<true/>
+	<key>com.apple.security.files.user-selected.read-write</key>
+	<true/>
+</dict>
+</plist>

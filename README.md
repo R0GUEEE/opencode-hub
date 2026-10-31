@@ -57,38 +57,60 @@ singular names still work as a legacy fallback, and the hub only ever writes plu
 
 ## Build
 
-Requires Xcode 15+ (or the Command Line Tools) with Swift 5.9.
+The app is a native Xcode target generated from `project.yml` by
+[XcodeGen](https://github.com/yonaskolb/XcodeGen): asset catalog icon, entitlements,
+Info.plist processing, universal architectures and signing all come from
+`xcodebuild`, not from a shell script assembling a bundle by hand.
 
-CI builds every push on `macos-15` and uploads `OpenCodeHub.zip`; pushing a `v*` tag
-publishes the universal bundle as a release asset.
-
-```bash
-cd opencode-hub
-make setup               # toolchain + manifest + dependency graph
-make app                 # -> build/OpenCode Hub.app
-open "build/OpenCode Hub.app"
-```
-
-or, without the Makefile:
+| Requirement | Version |
+| --- | --- |
+| macOS | 13.0+ |
+| Xcode | 15+ (Swift 5.9) |
+| XcodeGen | 2.38+ — `brew install xcodegen` |
 
 ```bash
-swift build -c release
-./scripts/build-app.sh
+brew install xcodegen
+make project     # writes OpenCodeHub.xcodeproj from project.yml
+make app         # -> build/Open Code Hub.app (universal, ad-hoc signed)
+make dmg         # -> build/OpenCodeHub-1.1.0.dmg
+open "build/Open Code Hub.app"
 ```
 
-A universal (Apple silicon + Intel) build:
+`make app` prefers `xcodegen` + `xcodebuild`. Without XcodeGen it falls back to
+`swift build` plus a hand-assembled bundle: enough to run locally, but the asset
+catalog is skipped.
+
+Settings that matter, all in `project.yml`:
+
+* `PRODUCT_NAME = "Open Code Hub"`, bundle id `dev.minis.opencodehub`
+* `MARKETING_VERSION` / `CURRENT_PROJECT_VERSION`, overridable with `VERSION=`
+* `CODE_SIGN_IDENTITY = "-"` (ad-hoc) and `ENABLE_HARDENED_RUNTIME = NO`, so an
+  unnotarised build launches without a team certificate
+* `Support/OpenCodeHub.entitlements`: sandbox **off** — the app edits an existing
+  `~/.config/opencode` tree and runs the user's own binaries — with
+  `network.client` and `files.user-selected.read-write` declared for the network
+  calls and file panels it performs.
+
+CI runs `swift build` as a fast compile gate, then builds the bundle with
+`xcodebuild`, checks both architectures, `Assets.car`, the bundle identifier and
+`codesign --verify --deep --strict`, and uploads `OpenCodeHub.zip`. A `v*` tag
+publishes it as a release asset.
+
+First launch after downloading: right-click → Open once, or
 
 ```bash
-make app UNIVERSAL=1     # lipo: arm64 + x86_64
-make dmg UNIVERSAL=1     # -> build/OpenCodeHub-1.0.0.dmg
+xattr -dr com.apple.quarantine "/Applications/Open Code Hub.app"
 ```
-
-The bundle is ad-hoc signed. Gatekeeper still wants a right-click → Open the first
-time, or run `xattr -dr com.apple.quarantine "build/OpenCode Hub.app"`.
 
 ## Layout
 
 ```
+project.yml                     XcodeGen spec: app target, assets, entitlements, scheme
+Package.swift                   SwiftPM mirror of the same sources (compile gate)
+Resources/Assets.xcassets       AppIcon: 10 sizes, compiled to Assets.car
+Support/Info.plist              bundle metadata: category, version, icon name
+Support/OpenCodeHub.entitlements  sandbox off, network client, user-selected files
+Support/AppIcon.png             1024px master; scripts/make-iconset.py slices it
 Sources/OpenCodeHub/
   OpenCodeHubApp.swift        App entry, menu commands, AppDelegate
   Core/Paths.swift            XDG-aware path resolution + project root discovery

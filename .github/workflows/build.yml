@@ -7,45 +7,69 @@ on:
   pull_request:
   workflow_dispatch:
 
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   macos:
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
 
-      - name: Show toolchain
-        run: swift --version && xcodebuild -version
+      - name: Toolchain
+        run: |
+          sw_vers
+          swift --version
+          xcodebuild -version
 
-      - name: Cache SwiftPM
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Cache SwiftPM and Xcode build products
         uses: actions/cache@v4
         with:
-          path: .build
-          key: ${{ runner.os }}-swiftpm-${{ hashFiles('Package.swift', 'Package.resolved') }}
+          path: |
+            .build
+            .swiftpm
+            ~/Library/Developer/Xcode/DerivedData
+          key: build-${{ runner.os }}-${{ hashFiles('Package.swift', 'Package.resolved', 'project.yml') }}
           restore-keys: |
-            ${{ runner.os }}-swiftpm-
+            build-${{ runner.os }}-
 
-      - name: Resolve dependencies
+      - name: Verify toolchain and dependencies
         run: |
           chmod +x scripts/*.sh
           ./scripts/setup.sh --check-only
 
-      - name: Build app bundle
+      - name: SwiftPM compile gate
+        run: swift build -c release
+
+      - name: Build native app bundle
         run: |
-          chmod +x scripts/*.sh
-          UNIVERSAL=1 CONFIG=release VERSION="${GITHUB_REF_NAME#v}" ./scripts/build-app.sh
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then export VERSION="${GITHUB_REF_NAME#v}"; fi
+          UNIVERSAL=1 CONFIG=release ./scripts/build-app.sh
         shell: bash
 
       - name: Verify bundle
         run: |
-          test -x "build/OpenCode Hub.app/Contents/MacOS/OpenCodeHub"
-          /usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "build/OpenCode Hub.app/Contents/Info.plist"
-          lipo -archs "build/OpenCode Hub.app/Contents/MacOS/OpenCodeHub" | grep -q x86_64
-          lipo -archs "build/OpenCode Hub.app/Contents/MacOS/OpenCodeHub" | grep -q arm64
-          file "build/OpenCode Hub.app/Contents/MacOS/OpenCodeHub"
+          APP="build/Open Code Hub.app"
+          BIN="$APP/Contents/MacOS/Open Code Hub"
+          test -d "$APP"
+          test -x "$BIN"
+          lipo -archs "$BIN" | grep -q x86_64
+          lipo -archs "$BIN" | grep -q arm64
+          test -f "$APP/Contents/Resources/Assets.car"
+          test -f "$APP/Contents/Info.plist"
+          /usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$APP/Contents/Info.plist"
+          /usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$APP/Contents/Info.plist"
+          codesign --verify --deep --strict "$APP"
+          codesign -dv --entitlements :- "$APP" 2>&1 | head -20
+          file "$BIN"
 
       - name: Package
         run: |
-          ditto -c -k --sequesterRsrc --keepParent "build/OpenCode Hub.app" "build/OpenCodeHub.zip"
+          ditto -c -k --sequesterRsrc --keepParent "build/Open Code Hub.app" "build/OpenCodeHub.zip"
           ls -lh build
 
       - uses: actions/upload-artifact@v4
@@ -68,3 +92,4 @@ jobs:
       - uses: softprops/action-gh-release@v2
         with:
           files: dist/OpenCodeHub.zip
+          generate_release_notes: true
