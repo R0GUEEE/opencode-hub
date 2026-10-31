@@ -90,7 +90,7 @@ extension Workspace {
 
     func installDependencies() async {
         await perform("Installing dependencies") { [self] in
-            try await DependencyInstaller.install(base: dependencies.base, log: logger())
+            _ = try await DependencyInstaller.install(base: dependencies.base, log: logger())
             dependencies.reload()
             log.success("Installed \(dependencies.installedCount) packages in \(Paths.tilde(dependencies.base))")
         }

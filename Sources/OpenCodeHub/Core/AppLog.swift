@@ -59,7 +59,7 @@ final class AppLog: ObservableObject {
             FileManager.default.createFile(atPath: fileURL.path, contents: nil)
         }
         handle = try? FileHandle(forWritingTo: fileURL)
-        try? handle?.seekToEnd()
+        _ = try? handle?.seekToEnd()
         if let text = FS.read(fileURL) {
             for line in text.split(separator: "\n").suffix(100) {
                 entries.append(LogEntry(date: Date(), level: .info, text: String(line)))

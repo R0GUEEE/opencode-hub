@@ -32,13 +32,13 @@ enum HTTP {
         return data
     }
 
-    static func json(_ urlString: String, headers: [String: String] = [:]) async throws -> Any {
-        let data = try await data(urlString, headers: headers)
+    static func json(_ urlString: String, headers: [String: String] = [:], timeout: TimeInterval = 25) async throws -> Any {
+        let data = try await data(urlString, headers: headers, timeout: timeout)
         return try JSONSerialization.jsonObject(with: data, options: [.fragmentsAllowed])
     }
 
-    static func text(_ urlString: String, headers: [String: String] = [:]) async throws -> String {
-        String(decoding: try await data(urlString, headers: headers), as: UTF8.self)
+    static func text(_ urlString: String, headers: [String: String] = [:], timeout: TimeInterval = 25) async throws -> String {
+        String(decoding: try await data(urlString, headers: headers, timeout: timeout), as: UTF8.self)
     }
 }
 

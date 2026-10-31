@@ -25,7 +25,7 @@ struct PluginsView: View {
             pinSheet(plugin)
         }
         .fileImporter(isPresented: $showImporter,
-                      allowedContentTypes: [.javascript, .plainText, .sourceCode, .data],
+                      allowedContentTypes: [.sourceCode, .plainText, .data],
                       allowsMultipleSelection: false) { result in
             switch result {
             case .success(let urls):
